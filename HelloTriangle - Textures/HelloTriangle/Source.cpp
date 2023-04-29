@@ -26,6 +26,7 @@ using namespace std;
 
 
 #include "Shader.h"
+#include "stb_image.h"
 
 
 // Protótipo da função de callback de teclado
@@ -34,6 +35,7 @@ void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y);
 
 // Protótipos das funções
 int setupGeometry();
+int setupTexture(string texName, int& width, int& height);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -59,7 +61,7 @@ int main()
 //#endif
 
 	// Criação da janela GLFW
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Triangulo! - Rossana", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Triangulo! - Texturas", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Fazendo o registro da função de callback para a janela GLFW
@@ -90,9 +92,14 @@ int main()
 
 	// Gerando um buffer simples, com a geometria de um triângulo
 	GLuint VAO = setupGeometry();
-	
+	int texWidth, texHeight;
+	GLuint texID = setupTexture("../../Textures/large_red_bricks_diff_1k.jpg", texWidth, texHeight);
 	
 	glUseProgram(shader.ID);
+
+	glActiveTexture(GL_TEXTURE0);
+
+	shader.setTexBuffer0("texBuff");
 
 	glm::mat4 projection = glm::ortho(0.0, 800.0, 0.0, 600.0, -1.0, 1.0);
 	
@@ -132,24 +139,13 @@ int main()
 		GLint modelLoc = glGetUniformLocation(shader.ID, "model");
 		glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
-
-
-
-		glBindVertexArray(VAO); //Conectando ao buffer de geometria
-
+		glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
+		glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
+		
 		// Chamada de desenho - drawcall
-		// Poligono Preenchido - GL_TRIANGLES
-
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-		// Chamada de desenho - drawcall
-		// CONTORNO - GL_LINE_LOOP
-		// PONTOS - GL_POINTS
 		
-		glDrawArrays(GL_LINE_LOOP, 0, 3);
-
-
-
 		glBindVertexArray(0); //Desconectando o buffer de geometria
 
 		// Troca os buffers da tela
@@ -239,5 +235,47 @@ int setupGeometry()
 	glBindVertexArray(0); 
 
 	return VAO;
+}
+
+int setupTexture(string texName, int& width, int& height)
+{
+	GLuint texID;
+
+	// Gera o identificador da textura na memória 
+	glGenTextures(1, &texID);
+	glBindTexture(GL_TEXTURE_2D, texID);
+
+	//Parametrizando o wrapping da textura
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+	//Carregamento do arquivo de imagem da textura
+	int nrChannels;
+	unsigned char* data = stbi_load(texName.c_str(), &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		//Enviar a informação dos pixels da imagem para OpenGL gerar o buffer de textura
+		if (nrChannels == 3) //jpg, bmp
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		}
+		else //png
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		}
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+
+	return texID;
 }
 

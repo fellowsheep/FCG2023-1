@@ -74,7 +74,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../../dependencies/glm;../../dependencies/glfw-3.3.4.bin.WIN32/include;../../dependencies/GLAD/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../dependencies/stb_image;../../dependencies/glm;../../dependencies/glfw-3.3.4.bin.WIN32/include;../../dependencies/GLAD/include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>../../dependencies/glfw-3.3.4.bin.WIN32/lib-vc2019</AdditionalLibraryDirectories>
@@ -115,6 +115,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\dependencies\stb_image\stb_image.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Source.cpp" />

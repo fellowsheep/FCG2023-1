@@ -91,6 +91,14 @@ public:
     {
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
     }
+    // ------------------------------------------------------------------------
+    void setTexBuffer0(const std::string& name) const
+    {
+        glUniform1i(glGetUniformLocation(ID, name.c_str()), 0);
+    }
+
+    
+
 
 private:
     // utility function for checking shader compilation/linking errors.
