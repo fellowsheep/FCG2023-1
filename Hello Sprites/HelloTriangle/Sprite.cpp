@@ -6,28 +6,35 @@ Sprite::~Sprite()
 	glDeleteVertexArrays(1, &VAO);
 }
 
-void Sprite::initialize(GLuint texID, glm::vec2 sprDimensions, Shader* shader, glm::vec3 position, glm::vec3 scale, float angle, int nAnimations, int nFrames, glm::vec3 axis)
+void Sprite::initialize(GLuint texID, glm::vec2 sprDimensions, Shader* shader, int nAnimations, int nFrames, glm::vec3 position, glm::vec3 scale, float angle, glm::vec3 axis)
 {
 	this->texID = texID;
 	this->sprDimensions = sprDimensions;
 	this->shader = shader;
 	this->position = position;
-	this->scale = glm::vec3(sprDimensions,1.0);
+	this->scale = glm::vec3(sprDimensions.x / (float) nFrames, sprDimensions.y / (float)nAnimations, 1.0);
 	this->angle = angle;
 	this->nAnimations = nAnimations;
 	this->nFrames = nFrames;
 	this->axis = axis;
 
+	dx = 1.0 / (float)nFrames;
+	dy = 1.0 / (float)nAnimations;
+
+	iFrame = 0;
+	iAnimation = 0;
+	vel = 2.5;
+
 	GLfloat vertices[] = {
 		//Primeiro triangulo
 		//x   y     z    r    g    b    s	t
-		-0.5,  0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.1,  //v0
-		-0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,  //v1
-		 0.5,  0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0   //v2
+		-0.5,  0.5, 0.0, 1.0, 0.0, 0.0, 0.0, dy,  //v0
+		-0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, //v1
+		 0.5,  0.5, 0.0, 0.0, 0.0, 1.0, dx,  dy,  //v2
 		//Segundo triângulo
-		-0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,  //v1
-		 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0,  //v3
-		 0.5,  0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0   //v2
+		-0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, //v1
+		 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, dx,  0.0, //v3
+		 0.5,  0.5, 0.0, 0.0, 0.0, 1.0, dx,  dy   //v2
 
 	};
 
@@ -84,11 +91,28 @@ void Sprite::update()
 	model = glm::scale(model, scale);
 
 	//Enviando a matriz de modelo para o shader
-	//GLint modelLoc = glGetUniformLocation(shader.ID, "model");
-	//glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
+	shader->setMat4("model", glm::value_ptr(model));
+
+	//Enviando para o shader o deslocamento das coords de textura
+	//de acordo com os indices de animação e frame
+	iFrame = (iFrame + 1) % nFrames;
+	shader->setVec2("offsets", iFrame * dx, iAnimation * dy);
 
 }
 
 void Sprite::draw()
 {
+	glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
+	glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
+
+	// Chamada de desenho - drawcall
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glBindVertexArray(0); //Desconectando o buffer de geometria
+
+}
+
+void Sprite::moveRight()
+{
+	position.x += vel;
 }

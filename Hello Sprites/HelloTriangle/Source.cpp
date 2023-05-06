@@ -41,6 +41,8 @@ int setupTexture(string texName, int& width, int& height);
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
 
+//Sprites globais
+Sprite dino;
 
 // Função MAIN
 int main()
@@ -62,7 +64,7 @@ int main()
 //#endif
 
 	// Criação da janela GLFW
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Sprites!", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Sprites!!!", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Fazendo o registro da função de callback para a janela GLFW
@@ -95,9 +97,16 @@ int main()
 	int texWidth, texHeight;
 	//GLuint texID = setupTexture("../../Textures/large_red_bricks_diff_1k.jpg", texWidth, texHeight);
 	GLuint texID = setupTexture("../../Textures/desert-100.jpg", texWidth, texHeight);
-
+	
 	Sprite background;
-	background.initialize(texID, glm::vec2(texWidth, texHeight),&shader);
+	background.initialize(texID, glm::vec2(texWidth*0.25, texHeight*0.25),&shader);
+
+	texID = setupTexture("../../Textures/flaming_meteor.png", texWidth, texHeight);
+	Sprite meteor;
+	meteor.initialize(texID, glm::vec2(texWidth*1.25, texHeight * 1.25), &shader);
+
+	texID = setupTexture("../../Textures/dinoanda.png", texWidth, texHeight);
+	dino.initialize(texID, glm::vec2(texWidth*2, texHeight*2), &shader,1, 5, glm::vec3(100.0,150.0,0.0));
 
 
 	glUseProgram(shader.ID);
@@ -130,19 +139,14 @@ int main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glLineWidth(10);
-		glPointSize(20);
+		background.update();
+		background.draw();
 
+		meteor.update();
+		meteor.draw();
 
-		
-		//glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
-		//glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
-		
-		// Chamada de desenho - drawcall
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
-
-		
-		//glBindVertexArray(0); //Desconectando o buffer de geometria
+		dino.update();
+		dino.draw();
 
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
@@ -160,6 +164,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (key == GLFW_KEY_D || key == GLFW_KEY_RIGHT)
+	{
+		dino.moveRight();
+	}
+
 }
 
 void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y)
