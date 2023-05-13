@@ -23,7 +23,7 @@ void Sprite::initialize(GLuint texID, glm::vec2 sprDimensions, Shader* shader, i
 
 	iFrame = 0;
 	iAnimation = 0;
-	vel = 2.5;
+	vel = 5.0;
 
 	GLfloat vertices[] = {
 		//Primeiro triangulo
@@ -102,6 +102,7 @@ void Sprite::update()
 
 void Sprite::draw()
 {
+
 	glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
 	glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
 
@@ -109,6 +110,7 @@ void Sprite::draw()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	glBindVertexArray(0); //Desconectando o buffer de geometria
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 }
 
@@ -120,4 +122,17 @@ void Sprite::moveRight()
 void Sprite::moveLeft()
 {
 	position.x -= vel;
+}
+
+AABB Sprite::getAABB()
+{
+	AABB pontos;
+
+	pontos.pmin.x = position.x - sprDimensions.x / 2;
+	pontos.pmin.y = position.y - sprDimensions.y / 2;
+
+	pontos.pmax.x = position.x + sprDimensions.x / 2;
+	pontos.pmax.y = position.y + sprDimensions.y / 2;
+	
+	return pontos;
 }

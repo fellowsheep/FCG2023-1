@@ -27,7 +27,7 @@ using namespace std;
 
 #include "Shader.h"
 #include "stb_image.h"
-#include "Sprite.h"
+//#include "Sprite.h"
 #include "Meteor.h"
 #include "Timer.h"
 
@@ -39,6 +39,7 @@ void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y);
 // Protótipos das funções
 int setupGeometry();
 int setupTexture(string texName, int& width, int& height);
+bool testCollision(Sprite &a, Sprite &b);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -49,6 +50,8 @@ Sprite dino;
 // Função MAIN
 int main()
 {
+	srand(glfwGetTime());
+
 	// Inicialização da GLFW
 	glfwInit();
 
@@ -105,10 +108,12 @@ int main()
 
 	texID = setupTexture("../../Textures/flaming_meteor.png", texWidth, texHeight);
 	Meteor meteor;
-	meteor.initialize(texID, glm::vec2(texWidth*1.25, texHeight * 1.25), &shader);
+	meteor.initialize(texID, glm::vec2(texWidth*2, texHeight * 2), &shader,1, 1, glm::vec3(400.0,620.0,0.0));
+	meteor.setVelocity(10.0);
 
 	texID = setupTexture("../../Textures/dinoanda.png", texWidth, texHeight);
 	dino.initialize(texID, glm::vec2(texWidth*2, texHeight*2), &shader,1, 5, glm::vec3(100.0,150.0,0.0));
+	dino.setVelocity(7.5);
 
 	Timer timer;
 
@@ -126,6 +131,11 @@ int main()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	//Habilita o teste de profundidade
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_ALWAYS);
+
+
 	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
 	{
@@ -140,7 +150,7 @@ int main()
 
 		// Limpa o buffer de cor
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		background.update();
 		background.draw();
@@ -151,15 +161,21 @@ int main()
 		dino.update();
 		dino.draw();
 
+		bool isColliding = testCollision(meteor, dino);
+		//AQUI processa a lógica da colisão
+
+		//cout << dino.getPosition().x << " " << dino.getPosition().y << endl;
+
 		timer.finish();
-		double waitingTime = timer.calcWaitingTime(25, timer.getElapsedTimeMs());
-		if (waitingTime)
+		double waitingTime = timer.calcWaitingTime(30, timer.getElapsedTimeMs());
+		if (waitingTime > 0)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds((int)waitingTime));
 		}
 
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
+
 	}
 	
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
@@ -297,5 +313,16 @@ int setupTexture(string texName, int& width, int& height)
 	}
 
 	return texID;
+}
+
+bool testCollision(Sprite &a, Sprite &b)
+{
+	AABB pA = a.getAABB();
+	AABB pb = b.getAABB();
+
+	//teste de colisão
+	//Fazer o if pra ver se um AABB não sobrepõe o outro
+	
+	return true;
 }
 
