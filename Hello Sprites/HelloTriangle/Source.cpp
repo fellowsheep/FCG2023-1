@@ -28,6 +28,8 @@ using namespace std;
 #include "Shader.h"
 #include "stb_image.h"
 #include "Sprite.h"
+#include "Meteor.h"
+#include "Timer.h"
 
 
 // Protótipo da função de callback de teclado
@@ -102,12 +104,13 @@ int main()
 	background.initialize(texID, glm::vec2(texWidth*0.25, texHeight*0.25),&shader);
 
 	texID = setupTexture("../../Textures/flaming_meteor.png", texWidth, texHeight);
-	Sprite meteor;
+	Meteor meteor;
 	meteor.initialize(texID, glm::vec2(texWidth*1.25, texHeight * 1.25), &shader);
 
 	texID = setupTexture("../../Textures/dinoanda.png", texWidth, texHeight);
 	dino.initialize(texID, glm::vec2(texWidth*2, texHeight*2), &shader,1, 5, glm::vec3(100.0,150.0,0.0));
 
+	Timer timer;
 
 	glUseProgram(shader.ID);
 
@@ -126,7 +129,7 @@ int main()
 	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
 	{
-
+		timer.start();
 		// Definindo as dimensões da viewport com as mesmas dimensões da janela da aplicação
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
@@ -148,6 +151,13 @@ int main()
 		dino.update();
 		dino.draw();
 
+		timer.finish();
+		double waitingTime = timer.calcWaitingTime(25, timer.getElapsedTimeMs());
+		if (waitingTime)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds((int)waitingTime));
+		}
+
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
 	}
@@ -168,6 +178,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_D || key == GLFW_KEY_RIGHT)
 	{
 		dino.moveRight();
+	}
+
+	if (key == GLFW_KEY_A || key == GLFW_KEY_LEFT)
+	{
+		dino.moveLeft();
 	}
 
 }

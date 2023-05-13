@@ -116,3 +116,8 @@ void Sprite::moveRight()
 {
 	position.x += vel;
 }
+
+void Sprite::moveLeft()
+{
+	position.x -= vel;
+}

@@ -117,13 +117,17 @@
   <ItemGroup>
     <ClCompile Include="..\..\dependencies\stb_image\stb_image.cpp" />
     <ClCompile Include="glad.c" />
+    <ClCompile Include="Meteor.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Sprite.cpp" />
+    <ClCompile Include="Timer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Meteor.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Sprite.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="HelloTriangle.fs" />

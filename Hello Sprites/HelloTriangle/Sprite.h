@@ -7,6 +7,8 @@
 
 #include "Shader.h"
 
+enum states {IS_MOVING_RIGHT, IS_MOVING_LEFT, IDLE};
+
 class Sprite
 {
 public:
@@ -17,6 +19,7 @@ public:
 	void draw();
 	inline void setScale(glm::vec3 scale) { this->scale = scale; }
 	void moveRight();
+	void moveLeft();
 protected:
 	GLuint VAO; //identificador do buffer de geometria Vertex Array Object
 	GLuint texID; //identificador do buffer de textura
@@ -34,6 +37,7 @@ protected:
 	float dx, dy;
 	int iAnimation, iFrame;
 	float vel;
+	int status;
 
 };
 
