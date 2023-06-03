@@ -114,6 +114,23 @@ void Sprite::draw()
 
 }
 
+void Sprite::drawAABB()
+{
+	glm::vec3 color = glm::vec3(1.0, 1.0, 0.0);
+
+	vector <GLfloat> vBuffer;
+
+	AABB aabb = getAABB();
+
+	vBuffer.push_back(aabb.pmin.x);
+	vBuffer.push_back(aabb.pmin.y);
+	vBuffer.push_back(0.0);
+	vBuffer.push_back(color.r);
+	vBuffer.push_back(color.g);
+	vBuffer.push_back(color.b);
+
+}
+
 void Sprite::moveRight()
 {
 	position.x += vel;

@@ -27,9 +27,6 @@ using namespace std;
 
 #include "Shader.h"
 #include "stb_image.h"
-//#include "Sprite.h"
-#include "Meteor.h"
-#include "Timer.h"
 
 
 // Protótipo da função de callback de teclado
@@ -37,21 +34,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y);
 
 // Protótipos das funções
-int setupGeometry();
+int setupGeometry();//Cria a geometria do triângulo
+int setup3DGeometry(); //Cria a geometria da pirâmide
 int setupTexture(string texName, int& width, int& height);
-bool testCollision(Sprite &a, Sprite &b);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
 
-//Sprites globais
-Sprite dino;
 
 // Função MAIN
 int main()
 {
-	srand(glfwGetTime());
-
 	// Inicialização da GLFW
 	glfwInit();
 
@@ -69,7 +62,7 @@ int main()
 //#endif
 
 	// Criação da janela GLFW
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Sprites!!!", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Piramide!", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Fazendo o registro da função de callback para a janela GLFW
@@ -99,47 +92,37 @@ int main()
 	Shader shader("HelloTriangle.vs", "HelloTriangle.fs");
 
 	// Gerando um buffer simples, com a geometria de um triângulo
+	GLuint VAO = setup3DGeometry();
 	int texWidth, texHeight;
 	//GLuint texID = setupTexture("../../Textures/large_red_bricks_diff_1k.jpg", texWidth, texHeight);
-	GLuint texID = setupTexture("../../Textures/desert-100.jpg", texWidth, texHeight);
 	
-	Sprite background;
-	background.initialize(texID, glm::vec2(texWidth*0.25, texHeight*0.25),&shader);
-
-	texID = setupTexture("../../Textures/flaming_meteor.png", texWidth, texHeight);
-	Meteor meteor;
-	meteor.initialize(texID, glm::vec2(texWidth*2, texHeight * 2), &shader,1, 1, glm::vec3(400.0,620.0,0.0));
-	meteor.setVelocity(10.0);
-
-	texID = setupTexture("../../Textures/dinoanda.png", texWidth, texHeight);
-	dino.initialize(texID, glm::vec2(texWidth*2, texHeight*2), &shader,1, 5, glm::vec3(100.0,150.0,0.0));
-	dino.setVelocity(7.5);
-
-	Timer timer;
-
 	glUseProgram(shader.ID);
 
 	glActiveTexture(GL_TEXTURE0);
-	shader.setTexBuffer0("texBuff");
 
-	glm::mat4 projection = glm::ortho(0.0, 800.0, 0.0, 600.0, -1.0, 1.0);
-	
+	//shader.setTexBuffer0("texBuff");
+
+	glm::mat4 view = glm::mat4(1);
+		
+	view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), // Posição (ponto) 
+								 glm::vec3(0.0f, 0.0f, 0.0f), // Target (ponto, não vetor) -> dir = target - pos                
+								 glm::vec3(0.0f, 1.0f, 0.0f));// Up (vetor)
+
+	GLint viewLoc = glGetUniformLocation(shader.ID, "view");
+	glUniformMatrix4fv(viewLoc, 1, FALSE, glm::value_ptr(view));
+
+	//glm::mat4 projection = glm::ortho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
+
 	GLint projLoc = glGetUniformLocation(shader.ID, "projection");
 	glUniformMatrix4fv(projLoc, 1, FALSE, glm::value_ptr(projection));
 
-	//Habilitando a função de mistura no color buffer - transparência
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	//Habilita o teste de profundidade
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_ALWAYS);
-
 
 	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
 	{
-		timer.start();
+
 		// Definindo as dimensões da viewport com as mesmas dimensões da janela da aplicação
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
@@ -152,34 +135,42 @@ int main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		background.update();
-		background.draw();
+		glLineWidth(10);
+		glPointSize(20);
 
-		meteor.update();
-		meteor.draw();
 
-		dino.update();
-		dino.draw();
+		//Matriz de modelo: transformações no objeto
+		glm::mat4 model = glm::mat4(1); //matriz identidade
+		
+		//Translação
+		float offsetZ = cos(glfwGetTime()) * 2.0f;
+		model = glm::translate(model, glm::vec3(0.0,0.0,offsetZ));
 
-		bool isColliding = testCollision(meteor, dino);
-		//AQUI processa a lógica da colisão
-		if (isColliding)
-			cout << "BOOM!" << endl;
+		//Rotação
+		float angle = glfwGetTime();
+		model = glm::rotate(model, angle, glm::vec3(0.0, 1.0, 0.0));
+		
+		//Escala
+		//model = glm::scale(model, glm::vec3(200.0,200.0,1.0));
 
-		//cout << dino.getPosition().x << " " << dino.getPosition().y << endl;
+		//Enviando a matriz de modelo para o shader
+		GLint modelLoc = glGetUniformLocation(shader.ID, "model");
+		glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
-		timer.finish();
-		double waitingTime = timer.calcWaitingTime(30, timer.getElapsedTimeMs());
-		if (waitingTime > 0)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds((int)waitingTime));
-		}
+		glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
+		//glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
+		
+		// Chamada de desenho - drawcall
+		glDrawArrays(GL_TRIANGLES, 0, 18);
+
+		
+		glBindVertexArray(0); //Desconectando o buffer de geometria
 
 		// Troca os buffers da tela
 		glfwSwapBuffers(window);
-
 	}
-	
+	// Pede pra OpenGL desalocar os buffers
+	glDeleteVertexArrays(1, &VAO);
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
@@ -192,17 +183,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
-
-	if (key == GLFW_KEY_D || key == GLFW_KEY_RIGHT)
-	{
-		dino.moveRight();
-	}
-
-	if (key == GLFW_KEY_A || key == GLFW_KEY_LEFT)
-	{
-		dino.moveLeft();
-	}
-
 }
 
 void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y)
@@ -275,6 +255,81 @@ int setupGeometry()
 	return VAO;
 }
 
+int setup3DGeometry()
+{
+	GLfloat vertices[] = {
+		//Base da pirâmide: 2 triângulos
+		//x    y    z    r    g    b
+		-0.5, -0.5, -0.5, 1.0, 1.0, 0.0,
+		-0.5, -0.5,  0.5, 0.0, 1.0, 1.0,
+		 0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
+		 -0.5, -0.5, 0.5, 1.0, 1.0, 0.0,
+		  0.5, -0.5,  0.5, 0.0, 1.0, 1.0,
+		  0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
+		  //Triangulo 1
+		  -0.5, -0.5, -0.5, 1.0, 1.0, 0.0,
+		   0.0,  0.5,  0.0, 1.0, 1.0, 0.0,
+		   0.5, -0.5, -0.5, 1.0, 1.0, 0.0,
+		   //Triangulo 2
+				-0.5, -0.5, -0.5, 1.0, 0.0, 1.0,
+				0.0,  0.5,  0.0, 1.0, 0.0, 1.0,
+				-0.5, -0.5, 0.5, 1.0, 0.0, 1.0,
+				//Triangulo 3
+					-0.5, -0.5, 0.5, 1.0, 1.0, 0.0,
+				   0.0,  0.5,  0.0, 1.0, 1.0, 0.0,
+				   0.5, -0.5, 0.5, 1.0, 1.0, 0.0,
+				   //Triangulo 4
+					   0.5, -0.5, 0.5, 0.0, 1.0, 1.0,
+					  0.0,  0.5,  0.0, 0.0, 1.0, 1.0,
+					  0.5, -0.5, -0.5, 0.0, 1.0, 1.0,
+
+	};
+
+	GLuint VBO, VAO;
+
+	//Geração do identificador do VBO
+	glGenBuffers(1, &VBO);
+	//Faz a conexão (vincula) do buffer como um buffer de array
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//Envia os dados do array de floats para o buffer da OpenGl
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Geração do identificador do VAO (Vertex Array Object)
+	glGenVertexArrays(1, &VAO);
+	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+	// e os ponteiros para os atributos 
+	glBindVertexArray(VAO);
+	//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
+	// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
+	// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
+	// Tipo do dado
+	// Se está normalizado (entre zero e um)
+	// Tamanho em bytes 
+	// Deslocamento a partir do byte zero 
+
+	//Atributo posicao
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	//Atributo cor
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
+	//Atributo coordenada de textura 
+	//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+	//glEnableVertexAttribArray(2);
+
+	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
+	// atualmente vinculado - para que depois possamos desvincular com segurança
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
+	glBindVertexArray(0);
+
+	return VAO;
+
+}
+
 int setupTexture(string texName, int& width, int& height)
 {
 	GLuint texID;
@@ -316,22 +371,4 @@ int setupTexture(string texName, int& width, int& height)
 
 	return texID;
 }
-
-bool testCollision(Sprite &a, Sprite &b)
-{
-	AABB pA = a.getAABB();
-	AABB pB = b.getAABB();
-
-	//teste de colisão
-	//Fazer o if pra ver se um AABB não sobrepõe o outro
-	// Colisão no eixo x?
-	bool collisionX = pA.pmin.x < pB.pmax.x && pA.pmax.x > pB.pmin.x;
-	// Colisão no eixo y?
-	bool collisionY = pA.pmin.y < pB.pmax.y && pA.pmax.y > pB.pmin.y;
-	
-	//Há colisão se ambas são verdadeiras
-	return collisionX && collisionY;
-
-}
-
 

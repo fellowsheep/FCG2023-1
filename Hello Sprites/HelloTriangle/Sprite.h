@@ -7,6 +7,10 @@
 
 #include "Shader.h"
 
+#include <vector>
+
+using namespace std;
+
 enum states { IS_MOVING_RIGHT, IS_MOVING_LEFT, IDLE };
 
 struct AABB {
@@ -22,6 +26,7 @@ public:
 	void initialize(GLuint texID, glm::vec2 sprDimensions, Shader *shader, int nAnimations = 1, int nFrames = 1, glm::vec3 position = glm::vec3(400.0,300.0,0.0), glm::vec3 scale = glm::vec3(1.0,1.0,1.0), float angle = 0, glm::vec3 axis = glm::vec3(0.0,0.0,1.0));
 	void update();
 	void draw();
+	void drawAABB();
 	
 	void moveRight();
 	void moveLeft();
