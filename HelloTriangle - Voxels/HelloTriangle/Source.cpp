@@ -37,6 +37,7 @@ void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y);
 int setupGeometry();//Cria a geometria do triângulo
 int setup3DGeometry(); //Cria a geometria da pirâmide
 int setupTexture(string texName, int& width, int& height);
+int setupVoxel(glm::vec3 color);
 void updateCameraPos(GLFWwindow* window);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
@@ -76,7 +77,7 @@ int main()
 //#endif
 
 	// Criação da janela GLFW
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Piramide!", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Ola Voxels!", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Fazendo o registro da função de callback para a janela GLFW
@@ -84,7 +85,6 @@ int main()
 	glfwSetCursorPosCallback(window, mouse_callback);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
 
 
 	// GLAD: carrega todos os ponteiros d funções da OpenGL
@@ -100,24 +100,22 @@ int main()
 	cout << "Renderer: " << renderer << endl;
 	cout << "OpenGL version supported " << version << endl;
 
-	
-	// Exercício 4 da lista 2
-	// glViewport(400, 300, 400, 300);
-
 
 	// Compilando e buildando o programa de shader
 	Shader shader("HelloTriangle.vs", "HelloTriangle.fs");
 
+	glm::vec3 corAux = glm::vec3(1.0, 0.0, 0.0);
 	// Gerando um buffer simples, com a geometria de um triângulo
-	GLuint VAO = setup3DGeometry();
+	GLuint VAO = setupVoxel(corAux);
+	
 	int texWidth, texHeight;
-	//GLuint texID = setupTexture("../../Textures/large_red_bricks_diff_1k.jpg", texWidth, texHeight);
+	GLuint texID = setupTexture("../../Textures/large_red_bricks_diff_1k.jpg", texWidth, texHeight);
 	
 	glUseProgram(shader.ID);
 
 	glActiveTexture(GL_TEXTURE0);
 
-	//shader.setTexBuffer0("texBuff");
+	shader.setTexBuffer0("texBuff");
 
 	glm::mat4 view = glm::mat4(1);
 		
@@ -185,7 +183,7 @@ int main()
 		glUniformMatrix4fv(viewLoc, 1, FALSE, glm::value_ptr(view));
 
 		glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
-		//glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
+		glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
 		
 		//Matriz de modelo: transformações no objeto
 		glm::mat4 model= glm::mat4(1); //matriz identidade
@@ -213,17 +211,17 @@ int main()
 						glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
 						//Chamada de desenho
-						glDrawArrays(GL_TRIANGLES, 0, 18);
+						glDrawArrays(GL_TRIANGLES, 0, 36);
 					}
 				}
 
-		model = glm::mat4(1);
-		//Enviando a matriz de modelo para o shader
-		GLint modelLoc = glGetUniformLocation(shader.ID, "model");
-		glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
+		//model = glm::mat4(1);
+		////Enviando a matriz de modelo para o shader
+		//GLint modelLoc = glGetUniformLocation(shader.ID, "model");
+		//glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
-		// Desenha o chão
-		glDrawArrays(GL_TRIANGLES, 18, 6);
+		//// Desenha o chão
+		//glDrawArrays(GL_TRIANGLES, 18, 6);
 
 		
 		glBindVertexArray(0); //Desconectando o buffer de geometria
@@ -507,6 +505,217 @@ int setupTexture(string texName, int& width, int& height)
 	}
 
 	return texID;
+}
+
+int setupVoxel(glm::vec3 color)
+{
+	GLfloat vertices[] = {
+		//Base do cubo: 2 triângulos
+		//x    y    z     r     g     b     s    t
+		-0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 0.0, 0.0,
+		-0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 0.0, 1.0,
+		 0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 1.0, 0.0,
+
+		-0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 1.0, 0.0,
+		 0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 0.0, 1.0,
+		 0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 1.0, 1.0,
+
+		//Face de cima: 2 triângulos
+		-0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 0.0, 0.0,
+		 0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 0.0, 1.0,
+		-0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 1.0, 0.0,
+
+		 0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 1.0, 0.0,
+		 0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 0.0, 1.0,
+		-0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 1.0, 1.0,
+
+		//Face de frente: 2 triângulos
+		-0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 0.0,
+		-0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 1.0,
+		 0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 0.0,
+
+		 0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 0.0,
+		-0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 1.0,
+		 0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 1.0,
+
+		//Face de trás: 2 triângulos
+		-0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 0.0,
+		-0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 1.0,
+		 0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 0.0,
+
+		 0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 0.0,
+		-0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 1.0,
+		 0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 1.0,
+		
+		 //Face da esquerda: 2 triângulos
+		-0.5,  0.5, -0.5, 0.28, 0.28, 1.0, 0.0, 0.0,
+		-0.5, -0.5, -0.5, 0.28, 0.28, 1.0, 0.0, 1.0,
+		-0.5, -0.5,  0.5, 0.28, 0.28, 1.0, 1.0, 0.0,
+
+		-0.5, -0.5,  0.5, 0.28, 0.28, 1.0, 1.0, 0.0,
+		-0.5,  0.5,  0.5, 0.28, 0.28, 1.0, 0.0, 1.0,
+		-0.5,  0.5, -0.5, 0.28, 0.28, 1.0, 1.0, 1.0,
+		
+		//Face da direita: 2 triângulos
+		0.5,  0.5,  0.5, 0.47, 0.18, 0.54, 0.0, 0.0,
+		0.5, -0.5,  0.5, 0.47, 0.18, 0.54, 0.0, 1.0,
+		0.5, -0.5, -0.5, 0.47, 0.18, 0.54, 1.0, 0.0,
+
+		0.5, -0.5, -0.5, 0.47, 0.18, 0.54, 1.0, 0.0,
+		0.5,  0.5, -0.5, 0.47, 0.18, 0.54, 0.0, 1.0,
+		0.5,  0.5,  0.5, 0.47, 0.18, 0.54, 1.0, 1.0,
+	};
+
+
+	GLuint VBO, VAO;
+
+	//Geração do identificador do VBO
+	glGenBuffers(1, &VBO);
+	//Faz a conexão (vincula) do buffer como um buffer de array
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//Envia os dados do array de floats para o buffer da OpenGl
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Geração do identificador do VAO (Vertex Array Object)
+	glGenVertexArrays(1, &VAO);
+	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+	// e os ponteiros para os atributos 
+	glBindVertexArray(VAO);
+	//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
+	// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
+	// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
+	// Tipo do dado
+	// Se está normalizado (entre zero e um)
+	// Tamanho em bytes 
+	// Deslocamento a partir do byte zero 
+
+	//Atributo posicao
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	//Atributo cor
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
+	//Atributo coordenada de textura 
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
+
+	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
+	// atualmente vinculado - para que depois possamos desvincular com segurança
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
+	glBindVertexArray(0);
+
+	return VAO;
+
+}
+
+
+int setupVoxelGrid(int width, int height, int depth)
+{
+	GLfloat vertices[] = {
+		//Base do cubo: 2 triângulos
+		//x    y    z     r     g     b     s    t
+		-0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 0.0, 0.0,
+		-0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 0.0, 1.0,
+		 //0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 1.0, 0.0,
+
+		//-0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 1.0, 0.0,
+		 0.5, -0.5,  0.5, 0.88, 0.15, 0.07, 0.0, 1.0,
+		 0.5, -0.5, -0.5, 0.88, 0.15, 0.07, 1.0, 1.0,
+
+		 //Face de cima: 2 triângulos
+		 -0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 0.0, 0.0,
+		  0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 0.0, 1.0,
+		 -0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 1.0, 0.0,
+
+		  0.5, 0.5,  0.5, 1.0, 0.41, 0.03, 1.0, 0.0,
+		  0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 0.0, 1.0,
+		 -0.5, 0.5, -0.5, 1.0, 0.41, 0.03, 1.0, 1.0,
+
+		 //Face de frente: 2 triângulos
+		 -0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 0.0,
+		 -0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 1.0,
+		  0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 0.0,
+
+		  0.5, -0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 0.0,
+		 -0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 0.0, 1.0,
+		  0.5,  0.5, -0.5, 0.94, 1.0, 0.03, 1.0, 1.0,
+
+		  //Face de trás: 2 triângulos
+		  -0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 0.0,
+		  -0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 1.0,
+		   0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 0.0,
+
+		   0.5,  0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 0.0,
+		  -0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 0.0, 1.0,
+		   0.5, -0.5, 0.5, 0.09, 0.49, 0.12, 1.0, 1.0,
+
+		   //Face da esquerda: 2 triângulos
+		  -0.5,  0.5, -0.5, 0.28, 0.28, 1.0, 0.0, 0.0,
+		  -0.5, -0.5, -0.5, 0.28, 0.28, 1.0, 0.0, 1.0,
+		  -0.5, -0.5,  0.5, 0.28, 0.28, 1.0, 1.0, 0.0,
+
+		  -0.5, -0.5,  0.5, 0.28, 0.28, 1.0, 1.0, 0.0,
+		  -0.5,  0.5,  0.5, 0.28, 0.28, 1.0, 0.0, 1.0,
+		  -0.5,  0.5, -0.5, 0.28, 0.28, 1.0, 1.0, 1.0,
+
+		  //Face da direita: 2 triângulos
+		  0.5,  0.5,  0.5, 0.47, 0.18, 0.54, 0.0, 0.0,
+		  0.5, -0.5,  0.5, 0.47, 0.18, 0.54, 0.0, 1.0,
+		  0.5, -0.5, -0.5, 0.47, 0.18, 0.54, 1.0, 0.0,
+
+		  0.5, -0.5, -0.5, 0.47, 0.18, 0.54, 1.0, 0.0,
+		  0.5,  0.5, -0.5, 0.47, 0.18, 0.54, 0.0, 1.0,
+		  0.5,  0.5,  0.5, 0.47, 0.18, 0.54, 1.0, 1.0,
+	};
+
+
+	GLuint VBO, VAO;
+
+	//Geração do identificador do VBO
+	glGenBuffers(1, &VBO);
+	//Faz a conexão (vincula) do buffer como um buffer de array
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	//Envia os dados do array de floats para o buffer da OpenGl
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	//Geração do identificador do VAO (Vertex Array Object)
+	glGenVertexArrays(1, &VAO);
+	// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+	// e os ponteiros para os atributos 
+	glBindVertexArray(VAO);
+	//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
+	// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
+	// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
+	// Tipo do dado
+	// Se está normalizado (entre zero e um)
+	// Tamanho em bytes 
+	// Deslocamento a partir do byte zero 
+
+	//Atributo posicao
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	//Atributo cor
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
+	//Atributo coordenada de textura 
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
+
+	// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
+	// atualmente vinculado - para que depois possamos desvincular com segurança
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
+	glBindVertexArray(0);
+
+	return VAO;
+
 }
 
 void updateCameraPos(GLFWwindow* window)
