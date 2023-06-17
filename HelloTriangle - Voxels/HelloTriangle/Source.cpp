@@ -11,8 +11,6 @@
 #include <string>
 #include <assert.h>
 
-using namespace std;
-
 // GLAD
 #include <glad/glad.h>
 
@@ -24,9 +22,14 @@ using namespace std;
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// Outras 
+#include <vector>
+#include <fstream>
 
 #include "Shader.h"
 #include "stb_image.h"
+
+using namespace std;
 
 
 // Protótipo da função de callback de teclado
@@ -38,13 +41,15 @@ int setupGeometry();//Cria a geometria do triângulo
 int setup3DGeometry(); //Cria a geometria da pirâmide
 int setupTexture(string texName, int& width, int& height);
 int setupVoxel(glm::vec3 color);
+void setupColorPalette();
 void updateCameraPos(GLFWwindow* window);
+void save(string fileName);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 800, HEIGHT = 600;
 
 //Variáveis de controle da câmera
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); 
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -56,6 +61,13 @@ float yaw = -90.0, pitch = 0.0; //rotação em x e y
 int voxelmap[5][5][5];
 glm::vec3 gridCursor = glm::vec3(0, 0, 0);
 
+vector <glm::vec3> colorPalette;
+int iColor = 0;
+
+enum colorNames {VERMELHO, VERDE, AZUL, AMARELO, MAGENTA, CIANO, PRETO, BRANCO, NONE = -1};
+
+
+bool topview = false;
 
 // Função MAIN
 int main()
@@ -104,6 +116,9 @@ int main()
 	// Compilando e buildando o programa de shader
 	Shader shader("HelloTriangle.vs", "HelloTriangle.fs");
 
+	//Definindo a paleta de cores
+	setupColorPalette();
+
 	glm::vec3 corAux = glm::vec3(1.0, 0.0, 0.0);
 	// Gerando um buffer simples, com a geometria de um triângulo
 	GLuint VAO = setupVoxel(corAux);
@@ -133,12 +148,15 @@ int main()
 	glUniformMatrix4fv(projLoc, 1, FALSE, glm::value_ptr(projection));
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
 	for (int x = 0; x < 5; x++)
 		for (int y = 0; y < 5; y++)
 			for (int z = 0; z < 5; z++)
 			{
-				voxelmap[x][y][z] = 0;
+				voxelmap[x][y][z] = NONE;
 			}
 
 	glm::vec3 voxelDimensions = glm::vec3(1.0, 1.0, 1.0);
@@ -178,24 +196,43 @@ int main()
 		//Escala
 		//model = glm::scale(model, glm::vec3(200.0,200.0,1.0));
 
-		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-		GLint viewLoc = glGetUniformLocation(shader.ID, "view");
-		glUniformMatrix4fv(viewLoc, 1, FALSE, glm::value_ptr(view));
+		if (!topview) {
+			view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+		}
+		else
+		{
+			glm::vec3 topViewPos = glm::vec3(0.0, 10.0, 0.0);
+			glm::vec3 topViewUp = glm::vec3(0.0, 0.0, -1.0);
+
+			view = glm::lookAt(topViewPos, // Posição (ponto) 
+				glm::vec3(0.0f, 0.0f, 0.0f), // Target (ponto, não vetor) -> dir = target - pos                
+				topViewUp);// Up (vetor)
+		}
+
+		shader.setMat4("view",glm::value_ptr(view));
 
 		glBindVertexArray(VAO); //Conectando ao buffer de geometria desejado
 		glBindTexture(GL_TEXTURE_2D, texID); //Conectando ao buffer de textura desejado
 		
+
 		//Matriz de modelo: transformações no objeto
 		glm::mat4 model= glm::mat4(1); //matriz identidade
+
+
+		
 
 		//Desenhar o mapa
 		for (int x = 0; x < 5; x++)
 			for (int y = 0; y < 5; y++)
 				for (int z = 0; z < 5; z++)
 				{
-					bool voxel = voxelmap[x][y][z];
-					if (voxel == true)
+
+					int iVoxel = voxelmap[x][y][z]; //recupera o indice do voxel no voxelMap
+					if (iVoxel >= 0)
 					{
+						//mandar para o shader a cor do Voxel
+						shader.setVec4("inputColor", colorPalette[iVoxel].r, colorPalette[iVoxel].g, colorPalette[iVoxel].b, 1.0);
+
 						//alterar a posição do voxel
 						model = glm::mat4(1); //matriz identidade
 
@@ -210,29 +247,46 @@ int main()
 						GLint modelLoc = glGetUniformLocation(shader.ID, "model");
 						glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
-						//Chamada de desenho
+						//Chamada de desenho do voxel
 						glDrawArrays(GL_TRIANGLES, 0, 36);
 					}
 				}
 
-		//model = glm::mat4(1);
-		////Enviando a matriz de modelo para o shader
-		//GLint modelLoc = glGetUniformLocation(shader.ID, "model");
-		//glUniformMatrix4fv(modelLoc, 1, FALSE, glm::value_ptr(model));
 
-		//// Desenha o chão
-		//glDrawArrays(GL_TRIANGLES, 18, 6);
+				//Desenho do cursor
+				shader.setVec4("inputColor", 1.0, 1.0, 0.0, 0.7);
+				model = glm::mat4(1);
 
-		
-		glBindVertexArray(0); //Desconectando o buffer de geometria
+				glm::vec3 pos;
+				pos.x = initialPos.x + gridCursor.x * voxelDimensions.x;
+				pos.y = initialPos.y + gridCursor.y * voxelDimensions.y;
+				pos.z = initialPos.z + gridCursor.z * voxelDimensions.z;
 
-		// Troca os buffers da tela
-		glfwSwapBuffers(window);
+				model = glm::translate(model, glm::vec3(pos.x, pos.y, pos.z));
+				model = glm::scale(model, glm::vec3(1.01, 1.01, 1.01));
+
+				shader.setMat4("model", glm::value_ptr(model));
+				//Chamada de desenho
+				glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+				//// Desenha o chão
+				//glDrawArrays(GL_TRIANGLES, 18, 6);
+
+
+				glBindVertexArray(0); //Desconectando o buffer de geometria
+
+				// Troca os buffers da tela
+				glfwSwapBuffers(window);
 	}
 	// Pede pra OpenGL desalocar os buffers
 	glDeleteVertexArrays(1, &VAO);
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
+
+
+	save("cenaTeste.txt");
+
 	return 0;
 }
 
@@ -252,7 +306,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	{
 		gridCursor.z = ((int)gridCursor.z - 1 + 5) % 5;
 	}
-	
+
 	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
 	{
 		gridCursor.x = ((int)gridCursor.x + 1) % 5;
@@ -260,10 +314,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
 	{
 		gridCursor.x = ((int)gridCursor.x - 1 + 5) % 5;
-	}
-	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-	{
-		voxelmap[(int)gridCursor.x][(int)gridCursor.y][(int)gridCursor.z] = 1;
 	}
 
 	if (key == GLFW_KEY_I && action == GLFW_PRESS)
@@ -274,7 +324,31 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	{
 		gridCursor.y = ((int)gridCursor.y - 1 + 5) % 5;
 	}
-	cout << (int)gridCursor.x << " " << (int)gridCursor.y << " " << (int)gridCursor.z << endl;
+
+	if (key >= GLFW_KEY_0 && key <= GLFW_KEY_7 && action == GLFW_PRESS)
+	{
+
+		iColor = key - 48;
+	}
+
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+	{
+		if (voxelmap[(int)gridCursor.x][(int)gridCursor.y][(int)gridCursor.z] != NONE)
+		{
+			//Remove o voxel
+			voxelmap[(int)gridCursor.x][(int)gridCursor.y][(int)gridCursor.z] = NONE;
+		}
+		else
+			//Insere o voxel com a cor selecionada
+			voxelmap[(int)gridCursor.x][(int)gridCursor.y][(int)gridCursor.z] = iColor;
+	}
+
+	if (key == GLFW_KEY_V && action == GLFW_PRESS)
+	{
+		topview = !topview;
+	}
+
+	//cout << (int)gridCursor.x << " " << (int)gridCursor.y << " " << (int)gridCursor.z << endl;
 }
 
 void mouse_callback(GLFWwindow* window, double mouse_x, double mouse_y)
@@ -737,3 +811,40 @@ void updateCameraPos(GLFWwindow* window)
 
 }
 
+void setupColorPalette()
+{
+	colorPalette.push_back(glm::vec3(1.0, 0.0, 0.0)); //vermelho 0
+	colorPalette.push_back(glm::vec3(0.0, 1.0, 0.0)); //verde 1
+	colorPalette.push_back(glm::vec3(0.0, 0.0, 1.0)); //azul 2
+	colorPalette.push_back(glm::vec3(1.0, 1.0, 0.0)); //amarelo 3
+	colorPalette.push_back(glm::vec3(1.0, 0.0, 1.0)); //magenta 4
+	colorPalette.push_back(glm::vec3(0.0, 1.0, 1.0)); //ciano 5
+	colorPalette.push_back(glm::vec3(0.0, 0.0, 0.0)); //preto 6
+	colorPalette.push_back(glm::vec3(1.0, 1.0, 1.0)); //branco 7
+}
+
+void save(string fileName)
+{
+	ofstream outputFile;
+	outputFile.open(fileName);
+
+	//Salvar o mapa
+	for (int y = 0; y < 5; y++) // linhas y
+	{
+		for (int z = 0; z < 5; z++) //profundidade z
+		{
+			for (int x = 0; x < 5; x++)//largura x
+			{
+				int iVoxel = voxelmap[x][y][z];
+				outputFile << iVoxel << " ";
+
+			}
+			outputFile << endl;
+		}
+		outputFile << endl;
+	}
+
+
+	outputFile.close();
+
+}

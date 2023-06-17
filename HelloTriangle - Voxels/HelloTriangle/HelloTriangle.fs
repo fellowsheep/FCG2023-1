@@ -7,7 +7,9 @@ out vec4 color;
 
 uniform sampler2D texBuff;
 
+uniform vec4 inputColor;
+
 void main()
 {
-	color = finalColor;//texture(texBuff,texCoord);//
+	color = inputColor; //* finalColor;//texture(texBuff,texCoord);//
 }
